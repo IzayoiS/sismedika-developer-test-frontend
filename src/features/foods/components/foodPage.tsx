@@ -33,20 +33,12 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import type { Food, FormData, FormErrors } from "../types/food";
+import type { ApiError } from "@/utils/types";
 
 interface SnackbarState {
   open: boolean;
   message: string;
   severity: "success" | "error" | "warning" | "info";
-}
-
-interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-  message?: string;
 }
 
 export default function FoodsPage() {
