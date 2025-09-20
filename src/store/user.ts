@@ -1,5 +1,5 @@
-// stores/auth.ts
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface User {
   fullname: string;
@@ -9,14 +9,49 @@ interface User {
 
 interface AuthState {
   user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
   setUser: (user: User) => void;
-  clearUser: () => void;
+  setToken: (token: string) => void;
+  login: (user: User, token: string) => void;
+  logout: () => void;
+  clearAuth: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      isAuthenticated: false,
 
-  setUser: (user: User) => set({ user }),
+      setUser: (user: User) => set({ user }),
 
-  clearUser: () => set({ user: null }),
-}));
+      setToken: (token: string) => set({ token }),
+
+      login: (user: User, token: string) =>
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+        }),
+
+      logout: () =>
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+        }),
+
+      clearAuth: () =>
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+        }),
+    }),
+    {
+      name: "auth-storage",
+    }
+  )
+);
