@@ -67,7 +67,7 @@ export function useLoginForm() {
         type: "success",
       });
 
-      navigate({ pathname: "/tables" });
+      navigate({ pathname: "/" });
     },
   });
 
