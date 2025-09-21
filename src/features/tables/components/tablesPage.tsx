@@ -5,11 +5,15 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Paper,
   Typography,
 } from "@mui/material";
 import { useState } from "react";
-import { useTables } from "../hooks/useTables";
+import { useTables, useUpdateTableStatus } from "../hooks/useTables";
 import { useNavigate } from "react-router-dom";
 
 type TableStatus = "available" | "occupied" | "reserved" | "inactive";
@@ -17,6 +21,12 @@ type TableStatus = "available" | "occupied" | "reserved" | "inactive";
 export default function TablesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+  const [selectedTable, setSelectedTable] = useState<{
+    id: number;
+    name: string;
+    status: TableStatus;
+  } | null>(null);
+  const { reserveTable, occupyTable } = useUpdateTableStatus();
   const {
     data: tables = [],
     isLoading,
@@ -68,6 +78,30 @@ export default function TablesPage() {
   const inactiveTables = tables.filter(
     (t) => (t.status as TableStatus) === "inactive"
   ).length;
+
+  const handleOpenDialog = (tableNumber: number, status: TableStatus) => {
+    setSelectedTable({
+      id: tableNumber,
+      name: `Table ${tableNumber}`,
+      status,
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedTable(null);
+  };
+
+  const handleSetStatus = (status: TableStatus) => {
+    if (!selectedTable) return;
+
+    if (status === "reserved") {
+      reserveTable.mutate(selectedTable.id);
+    } else if (status === "occupied") {
+      occupyTable.mutate(selectedTable.id);
+    }
+
+    setSelectedTable(null);
+  };
 
   const getTableColor = (status: TableStatus) => {
     switch (status) {
@@ -221,15 +255,18 @@ export default function TablesPage() {
                       color: "white",
                       width: "100%",
                       height: "100px",
-                      cursor: "pointer",
+                      cursor:
+                        status === "available" ? "pointer" : "not-allowed", // ⬅️ hanya available yg bisa klik
                       transition: "box-shadow 0.2s ease-in-out",
                       borderRadius: 1,
                       "&:hover": {
-                        boxShadow: 4,
+                        boxShadow: status === "available" ? 4 : 0,
                       },
                     }}
                     onClick={() => {
-                      console.log(`Table ${tableNumber} clicked`);
+                      if (status === "available") {
+                        handleOpenDialog(tableNumber, status);
+                      }
                     }}
                   >
                     <CardContent
@@ -254,6 +291,35 @@ export default function TablesPage() {
                 );
               })}
             </Box>
+            <Dialog open={!!selectedTable} onClose={handleCloseDialog}>
+              <DialogTitle>
+                {selectedTable ? selectedTable.name : "Select Table"}
+              </DialogTitle>
+              <DialogContent dividers>
+                <Typography>
+                  Pilih status untuk {selectedTable?.name || "Table"}:
+                </Typography>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCloseDialog} color="inherit">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleSetStatus("reserved")}
+                  variant="outlined"
+                  color="secondary"
+                >
+                  Reserved
+                </Button>
+                <Button
+                  onClick={() => handleSetStatus("occupied")}
+                  variant="contained"
+                  color="primary"
+                >
+                  Occupied
+                </Button>
+              </DialogActions>
+            </Dialog>
 
             {/* Quick Stats - right side */}
             <Box
