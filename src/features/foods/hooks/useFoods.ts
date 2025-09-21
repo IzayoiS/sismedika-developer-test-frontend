@@ -6,7 +6,7 @@ export const useFoods = (options?: {
   refetchInterval?: number;
   enabled?: boolean;
 }) => {
-  const { refetchInterval, enabled = true } = options || {};
+  const { refetchInterval = 5000 } = options || {};
 
   return useQuery({
     queryKey: ["foods"],
@@ -15,9 +15,6 @@ export const useFoods = (options?: {
       return Array.isArray(response.data.data) ? response.data.data : [];
     },
     refetchInterval,
-    refetchOnWindowFocus: true,
-    enabled,
-    staleTime: 3000,
   });
 };
 
