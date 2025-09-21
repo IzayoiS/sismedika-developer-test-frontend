@@ -1,61 +1,64 @@
-import api from "@/lib/api";
-import { useAuthStore } from "@/store/user";
-import { GridView, Login, Logout, Search, ViewList } from "@mui/icons-material";
+import Navbar from "@/components/layouts/navBar";
 import {
-  Avatar,
   Box,
   Button,
   Card,
   CardContent,
-  IconButton,
-  InputAdornment,
-  ListItemIcon,
-  Menu,
-  MenuItem,
+  CircularProgress,
   Paper,
-  TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import Cookies from "js-cookie";
-import { useEffect, useState } from "react";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
-import type { Table } from "../types/table";
+import { useState } from "react";
+import { useTables } from "../hooks/useTables";
+import { useNavigate } from "react-router-dom";
 
 type TableStatus = "available" | "occupied" | "reserved" | "inactive";
 
 export default function TablesPage() {
-  const [tables, setTables] = useState<Table[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"floor" | "list">("floor");
-  const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
+  const {
+    data: tables = [],
+    isLoading,
+    error,
+    refetch,
+  } = useTables({
+    refetchInterval: 3000,
+  });
 
-  function onLogout() {
-    logout();
-    Cookies.remove("token");
-    localStorage.removeItem("auth-storage");
-    navigate("/login");
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          backgroundColor: "white",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
-  const fetchTables = async () => {
-    const res = await api.get("/tables", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    setTables(res.data);
-  };
-
-  useEffect(() => {
-    fetchTables();
-  }, []);
+  if (error) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <Typography color="error">Error loading tables</Typography>
+        <Button onClick={() => refetch()} sx={{ ml: 2 }}>
+          Retry
+        </Button>
+      </Box>
+    );
+  }
 
   const availableTables = tables.filter((t) => t.status === "available").length;
   const occupiedTables = tables.filter((t) => t.status === "occupied").length;
@@ -98,173 +101,7 @@ export default function TablesPage() {
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-      {/* Header */}
-      <Paper
-        elevation={1}
-        sx={{ borderRadius: 0, borderBottom: 1, borderColor: "divider" }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 3,
-            py: 2,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Box
-              sx={{
-                backgroundColor: "#1f2937",
-                color: "white",
-                px: 2,
-                py: 1,
-                borderRadius: 1,
-                fontWeight: "bold",
-                cursor: "pointer",
-              }}
-            >
-              RestaurantPOS
-            </Box>
-            <TextField
-              placeholder="Search table..."
-              size="small"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search sx={{ color: "text.secondary" }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                width: 250,
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#f9fafb",
-                  "& fieldset": {
-                    borderColor: "#e5e7eb",
-                  },
-                },
-              }}
-            />
-          </Box>
-
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {user ? (
-              <>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    textAlign: "center",
-                  }}
-                >
-                  <Avatar
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      bgcolor: "primary.main",
-                      fontSize: "0.875rem",
-                    }}
-                  >
-                    {user.fullname?.charAt(0).toUpperCase()}
-                  </Avatar>
-                  <Tooltip title="Account settings">
-                    <IconButton
-                      onClick={handleClick}
-                      size="small"
-                      sx={{ ml: 1 }}
-                      aria-controls={open ? "account-menu" : undefined}
-                      aria-haspopup="true"
-                      aria-expanded={open ? "true" : undefined}
-                    >
-                      <Box sx={{ textAlign: "left", mx: 1 }}>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontWeight: "medium", color: "text.primary" }}
-                        >
-                          {user.fullname}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{ color: "text.secondary" }}
-                        >
-                          {user.role}
-                        </Typography>
-                      </Box>
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <Menu
-                  anchorEl={anchorEl}
-                  id="account-menu"
-                  open={open}
-                  onClose={handleClose}
-                  onClick={handleClose}
-                  slotProps={{
-                    paper: {
-                      elevation: 0,
-                      sx: {
-                        overflow: "visible",
-                        filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.32))",
-                        mt: 1.5,
-                        "& .MuiAvatar-root": {
-                          width: 32,
-                          height: 32,
-                          ml: -0.5,
-                          mr: 1,
-                        },
-                        "&::before": {
-                          content: '""',
-                          display: "block",
-                          position: "absolute",
-                          top: 0,
-                          right: 14,
-                          width: 10,
-                          height: 10,
-                          bgcolor: "background.paper",
-                          transform: "translateY(-50%) rotate(45deg)",
-                          zIndex: 0,
-                        },
-                      },
-                    },
-                  }}
-                  transformOrigin={{ horizontal: "right", vertical: "top" }}
-                  anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-                >
-                  <MenuItem
-                    onClick={() => {
-                      onLogout();
-                      handleClose();
-                    }}
-                  >
-                    <ListItemIcon>
-                      <Logout fontSize="small" />
-                    </ListItemIcon>
-                    Logout
-                  </MenuItem>
-                </Menu>
-              </>
-            ) : (
-              <Button
-                component={RouterLink}
-                to="/login"
-                variant="contained"
-                size="small"
-                startIcon={<Login fontSize="small" />}
-                sx={{
-                  backgroundColor: "primary.main",
-                  p: 1,
-                  px: 2,
-                }}
-              >
-                Login
-              </Button>
-            )}
-          </Box>
-        </Box>
-      </Paper>
+      <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
 
       {/* Main Content */}
       <Box sx={{ display: "flex" }}>
@@ -285,42 +122,19 @@ export default function TablesPage() {
               Table Management
             </Typography>
 
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant={viewMode === "floor" ? "contained" : "outlined"}
-                startIcon={<GridView />}
-                onClick={() => setViewMode("floor")}
-                sx={{
-                  backgroundColor:
-                    viewMode === "floor" ? "#1f2937" : "transparent",
-                  color: viewMode === "floor" ? "white" : "#1f2937",
-                  borderColor: "#1f2937",
-                  "&:hover": {
-                    backgroundColor:
-                      viewMode === "floor" ? "#374151" : "#f9fafb",
-                  },
-                }}
-              >
-                Floor Plan
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "contained" : "outlined"}
-                startIcon={<ViewList />}
-                onClick={() => setViewMode("list")}
-                sx={{
-                  backgroundColor:
-                    viewMode === "list" ? "#1f2937" : "transparent",
-                  color: viewMode === "list" ? "white" : "#1f2937",
-                  borderColor: "#1f2937",
-                  "&:hover": {
-                    backgroundColor:
-                      viewMode === "list" ? "#374151" : "#f9fafb",
-                  },
-                }}
-              >
-                List View
-              </Button>
-            </Box>
+            <Button
+              variant="contained"
+              onClick={() => navigate("/orders")}
+              sx={{
+                backgroundColor: "#1f2937",
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "#374151",
+                },
+              }}
+            >
+              View Orders
+            </Button>
           </Box>
 
           {/* Table Status Legend */}
