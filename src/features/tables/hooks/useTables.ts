@@ -11,66 +11,36 @@ export const useTables = (options?: {
   return useQuery({
     queryKey: ["tables"],
     queryFn: async (): Promise<Table[]> => {
-      const token = localStorage.getItem("token");
-      const response = await api.get("/tables", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/tables");
       return response.data;
     },
     refetchInterval,
   });
 };
 
-export const useCreateTable = () => {
+export function useUpdateTableStatus() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (tableData: Omit<Table, "id">) => {
-      const token = localStorage.getItem("token");
-      const response = await api.post("/tables", tableData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
+  const reserveTable = useMutation({
+    mutationFn: async (tableId: number) => {
+      const res = await api.post(`/tables/${tableId}/reserve`);
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tables"] });
     },
   });
-};
 
-export const useUpdateTable = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      ...tableData
-    }: Partial<Table> & { id: number }) => {
-      const token = localStorage.getItem("token");
-      const response = await api.put(`/tables/${id}`, tableData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
+  const occupyTable = useMutation({
+    mutationFn: async (tableId: number) => {
+      const res = await api.post(`/orders`, { table_id: tableId });
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tables"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
-};
 
-export const useDeleteTable = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: number) => {
-      const token = localStorage.getItem("token");
-      const response = await api.delete(`/tables/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tables"] });
-    },
-  });
-};
+  return { reserveTable, occupyTable };
+}
